@@ -13,7 +13,7 @@
 #define OFFSET (WIN + BONUS)
 #pragma warning(disable : 4996)
 #define NOEATFLIP_LIMIT 60
-#define POSITION_REPETITION_LIMIT 3
+#define POSITION_REPETITION_LIMIT 2
 
 #define IDAS_DEPTH 3
 #define IDAS_THRESHOLD 0.1
@@ -301,11 +301,11 @@ bool MyAI::isTimeUp() {
 	return this->timeIsUp;
 }
 double MyAI::NegaScout_max_alpha_bet_purning(ChessBoard chessboard, int* move, int color, const int depth, double alpha, double beta, const int remain_depth) {
-	vector<Move> Moves;
+	vector<Move> Moves, opMoves;
 	/*int Chess[2048];*/
-	int move_count = 0, flip_count = 0, remain_count = 0, remain_total = 0;
+	int move_count = 0, flip_count = 0, remain_count = 0, remain_total = 0, opMove_count = 0;
 	// move
-	move_count = Expand(chessboard.Board, color, Moves);
+	move_count = Expand(chessboard.Board, color, Moves, opMoves, opMove_count);
 	MoveOrderSort(chessboard.Board, Moves, move_count);
 	//sort(Moves.begin(), Moves.end(), Movecompare);
 	//assert(moves.size() == count);
@@ -351,7 +351,7 @@ double MyAI::NegaScout_max_alpha_bet_purning(ChessBoard chessboard, int* move, i
 		this->node++;
 
 		// odd: *-1, even: *1
-		return Evaluate(&chessboard, move_count + flip_count, color) * (depth & 1 ? -1 : 1);
+		return Evaluate(&chessboard, move_count + flip_count, color, Moves, opMoves) * (depth & 1 ? -1 : 1);
 	}
 	else {
 		double m = -DBL_MAX;
@@ -697,7 +697,107 @@ int MyAI::Expand(const int* board, const int color, int* Result)
 	}
 	return ResultCount;
 }
+int MyAI::Expand(const int* board, const int color, vector<Move>& Result, vector<Move>& opResult, int& opCount)
+{
+	int ResultCount = 0;
+	for (int i = 0; i < 32; i++)
+	{
+		if (board[i] >= 0 && board[i] / 7 == color)
+		{
+			//Gun
+			if (board[i] % 7 == 1)
+			{
+				int row = i / 4;
+				int col = i % 4;
+				for (int rowCount = row * 4; rowCount < (row + 1) * 4; rowCount++)
+				{
+					if (Referee(board, i, rowCount, color))
+					{
+						Move temp;
+						temp.moves = i * 100 + rowCount;
+						temp.priority = board[i] % 7;
+						Result.push_back(temp);
+					}
+				}
+				for (int colCount = col; colCount < 32; colCount += 4)
+				{
 
+					if (Referee(board, i, colCount, color))
+					{
+						Move temp;
+						temp.moves = i * 100 + colCount;
+						temp.priority = board[i] % 7;
+						Result.push_back(temp);
+					}
+				}
+			}
+			else
+			{
+				int Moves[4] = { i - 4,i + 1,i + 4,i - 1 };
+				for (int k = 0; k < 4; k++)
+				{
+
+					if (Moves[k] >= 0 && Moves[k] < 32 && Referee(board, i, Moves[k], color))
+					{
+						Move temp;
+						temp.moves = i * 100 + Moves[k];
+						temp.priority = board[i] % 7;
+						Result.push_back(temp);
+					}
+				}
+			}
+
+		}
+		else if (board[i] >= 0 && board[i] / 7 != color) {
+			//Gun
+			if (board[i] % 7 == 1)
+			{
+				int row = i / 4;
+				int col = i % 4;
+				for (int rowCount = row * 4; rowCount < (row + 1) * 4; rowCount++)
+				{
+					if (Referee(board, i, rowCount, color ^ 1))
+					{
+						Move temp;
+						temp.moves = i * 100 + rowCount;
+						temp.priority = board[i] % 7;
+						opResult.push_back(temp);
+					}
+				}
+				for (int colCount = col; colCount < 32; colCount += 4)
+				{
+
+					if (Referee(board, i, colCount, color ^ 1))
+					{
+						Move temp;
+						temp.moves = i * 100 + colCount;
+						temp.priority = board[i] % 7;
+						opResult.push_back(temp);
+					}
+				}
+			}
+			else
+			{
+				int Moves[4] = { i - 4,i + 1,i + 4,i - 1 };
+				for (int k = 0; k < 4; k++)
+				{
+
+					if (Moves[k] >= 0 && Moves[k] < 32 && Referee(board, i, Moves[k], color ^ 1))
+					{
+						Move temp;
+						temp.moves = i * 100 + Moves[k];
+						temp.priority = board[i] % 7;
+						opResult.push_back(temp);
+					}
+				}
+			}
+		}
+		
+	}
+	opCount = opResult.size();
+	ResultCount = Result.size();
+	return ResultCount;
+}
 // Referee
 bool MyAI::Referee(const int* chess, const int from_location_no, const int to_location_no, const int UserId)
 {
@@ -840,7 +940,7 @@ double MyAI::Evaluate(const ChessBoard* chessboard,
 	double score = OFFSET;
 	double myMobilityScore = 0;
 	double opMobilityScore = 0;
-	bool finish;
+	bool finish = false;
 
 	if (legal_move_count == 0) { // Win, Lose
 		if (color == this->Color) { // Lose
@@ -854,7 +954,7 @@ double MyAI::Evaluate(const ChessBoard* chessboard,
 	else if (isDraw(chessboard)) { // Draw
 	   // score += DRAW - DRAW;
 		score += LOSE - WIN;
-		finish = true;
+		score -= 0.3;
 	}
 	else { // no conclusion
 	   // static material values
@@ -915,6 +1015,99 @@ double MyAI::Evaluate(const ChessBoard* chessboard,
 	return score;
 }
 
+double MyAI::Evaluate(const ChessBoard* chessboard,
+	const int legal_move_count, const int color, vector<Move>& Result, vector<Move>& opResult) {
+	// score = My Score - Opponent's Score
+	// offset = <WIN + BONUS> to let score always not less than zero
+	int singleMoveCount[14] = { 0 };
+	double score = OFFSET;
+	double myMobilityScore = 0;
+	double opMobilityScore = 0;
+	bool finish = false;
+
+	for (int i = 0; i < Result.size(); i++) {
+		int srcPiece = Result[i].moves / 100;
+		singleMoveCount[chessboard->Board[srcPiece]] ++;
+	}
+	for (int i = 0; i < opResult.size(); i++) {
+		int srcPiece = opResult[i].moves / 100;
+		singleMoveCount[chessboard->Board[srcPiece]] ++;
+	}
+	if (legal_move_count == 0) { // Win, Lose
+		if (color == this->Color) { // Lose
+			score += LOSE - WIN;
+		}
+		else { // Win
+			score += WIN - LOSE;
+		}
+		finish = true;
+	}
+	else if (isDraw(chessboard)) { // Draw
+	   // score += DRAW - DRAW;
+		score += LOSE - WIN;
+		score -= 10;
+	}
+	else { // no conclusion
+	   // static material values
+	   // cover and empty are both zero
+		static const double values[14] = {
+			  1,180,  6, 18, 90,270,1200,
+			  1,180,  6, 18, 90,270,1200
+		};
+
+		double piece_value = 0;
+		for (int i = 0; i < 32; i++) {
+			if (chessboard->Board[i] != CHESS_EMPTY &&
+				chessboard->Board[i] != CHESS_COVER) {
+				if (chessboard->Board[i] / 7 == this->Color) {
+					piece_value += values[chessboard->Board[i]];
+					myMobilityScore += 0.05 * values[chessboard->Board[i]] * singleMoveCount[chessboard->Board[i]];
+				}
+				else {
+					piece_value -= values[chessboard->Board[i]];
+					opMobilityScore += 0.05 * values[chessboard->Board[i]] * singleMoveCount[chessboard->Board[i]];
+				}
+			}
+		}
+		/*for (int i = 0; i < 14; ++i) {
+
+			if (this->Color == (i / 7))myMobilityScore += values[i] * 0.01 * pieceMoveCount[i];
+			else opMobilityScore += values[i] * 0.01 * pieceMoveCount[i];
+
+		}*/
+		// linear map to (-<WIN>, <WIN>)
+		// score max value = 1*5 + 180*2 + 6*2 + 18*2 + 90*2 + 270*2 + 810*1 = 1943
+		// <ORIGINAL_SCORE> / <ORIGINAL_SCORE_MAX_VALUE> * (<WIN> - 0.01)
+		piece_value += 0.75 * myMobilityScore - opMobilityScore;
+		piece_value = piece_value / 1943 * (WIN - 0.01) ;
+		score += piece_value ;
+		finish = false;
+	}
+
+	// Bonus (Only Win / Draw)
+	if (finish) {
+		if ((this->Color == RED && chessboard->Red_Chess_Num > chessboard->Black_Chess_Num) ||
+			(this->Color == BLACK && chessboard->Red_Chess_Num < chessboard->Black_Chess_Num)) {
+			if (!(legal_move_count == 0 && color == this->Color)) { // except Lose
+				double bonus = BONUS / BONUS_MAX_PIECE *
+					abs(chessboard->Red_Chess_Num - chessboard->Black_Chess_Num);
+				if (bonus > BONUS) { bonus = BONUS; } // limit
+				score += bonus;
+			}
+		}
+		else if ((this->Color == RED && chessboard->Red_Chess_Num < chessboard->Black_Chess_Num) ||
+			(this->Color == BLACK && chessboard->Red_Chess_Num > chessboard->Black_Chess_Num)) {
+			if (!(legal_move_count == 0 && color != this->Color)) { // except Lose
+				double bonus = BONUS / BONUS_MAX_PIECE *
+					abs(chessboard->Red_Chess_Num - chessboard->Black_Chess_Num);
+				if (bonus > BONUS) { bonus = BONUS; } // limit
+				score -= bonus;
+			}
+		}
+	}
+
+	return score;
+}
 double MyAI::Nega_max(const ChessBoard chessboard, int* move, const int color, const int depth, const int remain_depth) {
 	vector<Move> s;
 	int Moves[2048], Chess[2048];

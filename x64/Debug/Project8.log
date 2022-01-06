@@ -1,4 +1,7 @@
 ﻿  MyAI.cpp
-C:\Users\ppp45\source\repos\Project8\Project8\MyAI.cpp(18,30): warning C4244: '引數': 將 'time_t' 轉換為 'unsigned int'，由於類型不同，可能導致資料遺失
-C:\Users\ppp45\source\repos\Project8\Project8\MyAI.cpp(338,7): warning C4101: 'moves': 未參考的區域變數
+C:\Users\ppp45\source\repos\Project8\Project8\MyAI.cpp(20,30): warning C4244: '引數': 將 'time_t' 轉換為 'unsigned int'，由於類型不同，可能導致資料遺失
+C:\Users\ppp45\source\repos\Project8\Project8\MyAI.cpp(446,7): warning C4101: 'moves': 未參考的區域變數
+C:\Users\ppp45\source\repos\Project8\Project8\MyAI.cpp(649,29): warning C4267: '=': 將 'size_t' 轉換為 'int'，資料可能遺失
+C:\Users\ppp45\source\repos\Project8\Project8\MyAI.cpp(797,27): warning C4267: '=': 將 'size_t' 轉換為 'int'，資料可能遺失
+C:\Users\ppp45\source\repos\Project8\Project8\MyAI.cpp(798,29): warning C4267: '=': 將 'size_t' 轉換為 'int'，資料可能遺失
   Project8.vcxproj -> C:\Users\ppp45\source\repos\Project8\x64\Debug\Project8.exe
