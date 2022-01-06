@@ -120,6 +120,9 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <StackReserveSize>52428800</StackReserveSize>
+      <StackCommitSize>4096</StackCommitSize>
+      <LargeAddressAware>false</LargeAddressAware>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -136,6 +139,9 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <StackReserveSize>52428800</StackReserveSize>
+      <StackCommitSize>4096</StackCommitSize>
+      <LargeAddressAware>false</LargeAddressAware>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

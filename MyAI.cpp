@@ -10,12 +10,13 @@
 #define LOSE 0.0
 #define BONUS 0.3
 #define BONUS_MAX_PIECE 8
-
 #define OFFSET (WIN + BONUS)
 #pragma warning(disable : 4996)
 #define NOEATFLIP_LIMIT 60
 #define POSITION_REPETITION_LIMIT 3
 
+#define IDAS_DEPTH 3
+#define IDAS_THRESHOLD 0.1
 MyAI::MyAI(void) { srand(time(NULL)); }
 
 MyAI::~MyAI(void) {}
@@ -491,10 +492,12 @@ void MyAI::generateMove(char move[6])
 	int StartPoint = 0;
 	int EndPoint = 0;
 	int stableMove = 0;
+	int IDAS_move = 0;
 	double t = -DBL_MAX;
+	double best = NegaScout_max_alpha_bet_purning(this->main_chessboard, &IDAS_move, this->Color, 0, -DBL_MAX, DBL_MAX, IDAS_DEPTH);
 	begin = clock();
 	// iterative-deeping, start from 3, time limit = <TIME_LIMIT> sec
-	for (int depth = 3; (double)(clock() - begin) / CLOCKS_PER_SEC < TIME_LIMIT && depth <= 13; depth+=2) {
+	for (int depth = 4; (double)(clock() - begin) / CLOCKS_PER_SEC < TIME_LIMIT ; depth+=2) {
 		this->node = 0;
 		int best_move;
 		double alpha_init = -DBL_MAX;
@@ -502,7 +505,22 @@ void MyAI::generateMove(char move[6])
 		this->purn_node_count = 0;
 		// run Nega-max
 		// t = Nega_max(this->main_chessboard, &best_move, this->Color, 0, depth);
-		t = NegaScout_max_alpha_bet_purning(this->main_chessboard, &best_move, this->Color, 0, alpha_init, beta_init, depth);
+		t = NegaScout_max_alpha_bet_purning(this->main_chessboard, &best_move, this->Color, 0, best - IDAS_THRESHOLD, best + IDAS_THRESHOLD, depth);
+		fprintf(stderr, "IDAS nodes: %d\n", this->node);
+		fflush(stderr);
+		if (t <= best - IDAS_THRESHOLD) {
+			this->node = 0;
+			t = NegaScout_max_alpha_bet_purning(this->main_chessboard, &best_move, this->Color, 0, alpha_init, best - IDAS_THRESHOLD, depth);
+			fprintf(stderr, "IDAS fail, nodes: %d\n", this->node);
+			fflush(stderr);
+		}
+		else if (t >= best + IDAS_THRESHOLD) {
+			this->node = 0;
+			t = NegaScout_max_alpha_bet_purning(this->main_chessboard, &best_move, this->Color, 0, best + IDAS_THRESHOLD, beta_init, depth);
+			fprintf(stderr, "IDAS fail, nodes: %d\n", this->node);
+			fflush(stderr);
+		}
+		best = t;
 		t -= OFFSET; // rescale
 
 		// replace the move and score
