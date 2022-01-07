@@ -12,8 +12,9 @@
 #define BONUS_MAX_PIECE 8
 #define OFFSET (WIN + BONUS)
 #pragma warning(disable : 4996)
-#define NOEATFLIP_LIMIT 60
-#define POSITION_REPETITION_LIMIT 2
+#define NOEATFLIP_LIMIT 55
+#define POSITION_REPETITION_LIMIT 3
+#define HISTORY_HERUSTIC_ACTIVE false
 
 #define IDAS_DEPTH 3
 #define IDAS_THRESHOLD 0.1
@@ -154,6 +155,10 @@ bool Movecompare(Move& a, Move& b) {
 	assert(a.priority >= 0);
 	return a.priority > b.priority; 
 }
+bool HistoryMovecompare(Move& a, Move& b) {
+	return a.historyValue > b.historyValue;
+}
+
 // *********************** AI FUNCTION *********************** //
 
 int MyAI::GetFin(char c)
@@ -261,6 +266,7 @@ void MoveOrderSort(const int* board, vector<Move>& moves, int& count) {
 		}
 	}
 }
+
 void MyAI::initBoardState(const char* data[])
 {
 	memset(main_chessboard.CoverChess, 0, sizeof(int) * 14);
@@ -302,11 +308,27 @@ bool MyAI::isTimeUp() {
 }
 double MyAI::NegaScout_max_alpha_bet_purning(ChessBoard chessboard, int* move, int color, const int depth, double alpha, double beta, const int remain_depth) {
 	vector<Move> Moves, opMoves;
+	
 	/*int Chess[2048];*/
 	int move_count = 0, flip_count = 0, remain_count = 0, remain_total = 0, opMove_count = 0;
 	// move
 	move_count = Expand(chessboard.Board, color, Moves, opMoves, opMove_count);
 	MoveOrderSort(chessboard.Board, Moves, move_count);
+	for (int i = 0; i < move_count; i++) {
+		int srcPiecePos = Moves[i].moves / 100;
+		int dstPiecePos = Moves[i].moves % 100;
+		Moves[i].historyValue = refutationTable[chessboard.Board[srcPiecePos] / 7][srcPiecePos][dstPiecePos];
+	}
+	for (int i = 0; i < move_count; i++) {
+		for (int k = i; k > 0; k--) {
+			if (Moves[k].historyValue > Moves[k - 1].historyValue) {
+				swap(Moves[k], Moves[k - 1]);
+				// fprintf(stderr, "[HH] replaced! move: %d -> %d value: %d -> %d\n", Moves[k].moves, Moves[k - 1].moves, Moves[k].historyValue, Moves[k-1].historyValue);
+				// fflush(stderr);
+			}
+			else break;
+		}
+	}
 	//sort(Moves.begin(), Moves.end(), Movecompare);
 	//assert(moves.size() == count);
 	//for (int i = 0; i < Moves.size(); i++) {
@@ -361,6 +383,13 @@ double MyAI::NegaScout_max_alpha_bet_purning(ChessBoard chessboard, int* move, i
 		for (int i = 0; i < move_count; i++) { // move
 			ChessBoard new_chessboard = chessboard;
 			// new FriendChessList
+			bool flag = false;
+			int srcPiecePos = Moves[i].moves / 100;
+			int dstPiecePos = Moves[i].moves % 100;
+			if (chessboard.HistoryCount > 6) {
+				flag = (chessboard.History[chessboard.HistoryCount - 4] == Moves[i].moves) && (chessboard.History[chessboard.HistoryCount - 2] == chessboard.History[chessboard.HistoryCount - 6]);
+			}
+			if (flag)continue;
 			MakeMove(&new_chessboard, Moves[i].moves, 0); // 0: dummy
 			double t = -NegaScout_max_alpha_bet_purning(new_chessboard, &new_move, color ^ 1, depth + 1, -n, -max(alpha, m), remain_depth - 1); // Scout testing
 			if (t > m) {
@@ -376,6 +405,7 @@ double MyAI::NegaScout_max_alpha_bet_purning(ChessBoard chessboard, int* move, i
 
 			if (m >= beta) {
 				this->purn_node_count += move_count - i;
+				refutationTable[chessboard.Board[srcPiecePos] / 7][srcPiecePos][dstPiecePos] += 1 << remain_depth;
 				return m;
 			}
 			n = max(alpha, m) + 1;
@@ -402,6 +432,120 @@ double MyAI::NegaScout_max_alpha_bet_purning(ChessBoard chessboard, int* move, i
 		//		if (r) *move = Moves[i];
 		//	}
 		//}
+		int srcPiecePos = *move / 100;
+		int dstPiecePos = *move % 100;
+		refutationTable[chessboard.Board[srcPiecePos] / 7][srcPiecePos][dstPiecePos] += 1 << remain_depth;
+		return m;
+	}
+}
+double MyAI::NegaScout_max_alpha_bet_purning_Original(ChessBoard chessboard, int* move, int color, const int depth, double alpha, double beta, const int remain_depth) {
+	vector<Move> Moves, opMoves;
+
+	/*int Chess[2048];*/
+	int move_count = 0, flip_count = 0, remain_count = 0, remain_total = 0, opMove_count = 0;
+	int index = -1;
+	// move
+	move_count = Expand(chessboard.Board, color, Moves, opMoves, opMove_count);
+	MoveOrderSort(chessboard.Board, Moves, move_count);
+	
+	
+	for (vector<Move>::iterator it = Moves.begin(); it != Moves.end(); it++) { // move
+		if (chessboard.HistoryCount > 6) {
+
+			if ((chessboard.History[chessboard.HistoryCount - 4] == it->moves) && (chessboard.History[chessboard.HistoryCount - 2] == chessboard.History[chessboard.HistoryCount - 6])) {
+				Moves.erase(it);
+				move_count--;
+				break;
+			}
+		}
+		
+	}
+	//sort(Moves.begin(), Moves.end(), Movecompare);
+	//assert(moves.size() == count);
+	//for (int i = 0; i < Moves.size(); i++) {
+	//	for (int k = i; k > 0; k--) {
+
+
+	//		if (chessboard.Board[Moves[k].moves % 100] < 0 && chessboard.Board[Moves[k - 1].moves % 100] < 0) {
+	//			// empty step
+	//			if (rand() % 2) {
+	//				swap(Moves[k], Moves[k - 1]);
+	//			}
+	//		}
+	//		if (chessboard.Board[Moves[k].moves % 100] % 7 > chessboard.Board[Moves[k - 1].moves % 100] % 7) {
+	//			swap(Moves[k], Moves[k - 1]);
+	//		}
+	//		else break;
+	//	}
+	//}
+	//// flip
+	//for (int j = 0; j < 14; j++) { // find remain chess
+	//	if (chessboard.CoverChess[j] > 0) {
+	//		Chess[remain_count] = j;
+	//		remain_count++;
+	//		remain_total += chessboard.CoverChess[j];
+	//	}
+	//}
+	//for (int i = 0; i < 32; i++) { // find cover
+	//	if (chessboard.Board[i] == CHESS_COVER) {
+	//		Moves[move_count + flip_count].moves = i * 100 + i;
+	//		flip_count++;
+	//	}
+	//}
+
+	// random_shuffle(Moves.begin(), Moves.end());
+	if (isTimeUp() || // time is up
+		remain_depth <= 0 ||   // reach limit of depth
+		chessboard.Red_Chess_Num == 0 || // terminal node (no chess type)
+		chessboard.Black_Chess_Num == 0 || // terminal node (no chess type)
+		move_count + flip_count == 0 // terminal node (no move type)
+		) {
+
+		this->node++;
+
+		// odd: *-1, even: *1
+		return Evaluate(&chessboard, move_count + flip_count, color, Moves, opMoves) * (depth & 1 ? -1 : 1);
+	}
+	else {
+		double m = -DBL_MAX;
+		double n = beta;
+		int new_move;
+		// search deeper
+		for (int i = 0; i < move_count; i++) { // move
+			ChessBoard new_chessboard = chessboard;
+			// new FriendChessList
+			
+			int srcPiecePos = Moves[i].moves / 100;
+			int dstPiecePos = Moves[i].moves % 100;
+			
+			
+			MakeMove(&new_chessboard, Moves[i].moves, 0); // 0: dummy
+			double t = -NegaScout_max_alpha_bet_purning_Original (new_chessboard, &new_move, color ^ 1, depth + 1, -n, -max(alpha, m), remain_depth - 1); // Scout testing
+			if (t > m) {
+				if (abs(n - beta) < 0.00001 || remain_depth < 3 || t >= beta) {
+					m = t;
+					*move = Moves[i].moves;
+				}
+				else {
+					m = -NegaScout_max_alpha_bet_purning_Original(new_chessboard, &new_move, color ^ 1, depth + 1, -beta, -t, remain_depth - 1); // re-search
+					*move = Moves[i].moves;
+				}
+			}
+
+			if (m >= beta) {
+				this->purn_node_count += move_count - i;
+				refutationTable[chessboard.Board[srcPiecePos] / 7][srcPiecePos][dstPiecePos] += 1 << remain_depth;
+				assert(*move >= 0);
+				return m;
+			}
+			n = max(alpha, m) + 1;
+
+		}
+		int srcPiecePos = *move / 100;
+		int dstPiecePos = *move % 100;
+		assert(*move >= 0);
+		refutationTable[chessboard.Board[srcPiecePos] / 7][srcPiecePos][dstPiecePos] += 1 << remain_depth;
+
 		return m;
 	}
 }
@@ -494,10 +638,32 @@ void MyAI::generateMove(char move[6])
 	int stableMove = 0;
 	int IDAS_move = 0;
 	double t = -DBL_MAX;
-	double best = NegaScout_max_alpha_bet_purning(this->main_chessboard, &IDAS_move, this->Color, 0, -DBL_MAX, DBL_MAX, IDAS_DEPTH);
+	//init refutation table
+	
+	for (int i = 0; i < 2; i++) {
+		for (int j = 0; j < 32; j++) {
+			for (int k = 0; k < 32; k++) {
+				refutationTable[i][j][k] = 0;
+			}
+		}
+	}
+	
 	begin = clock();
+	double best = NegaScout_max_alpha_bet_purning_Original (this->main_chessboard, &IDAS_move, this->Color, 0, -DBL_MAX, DBL_MAX, IDAS_DEPTH);
+
 	// iterative-deeping, start from 3, time limit = <TIME_LIMIT> sec
 	for (int depth = 4; (double)(clock() - begin) / CLOCKS_PER_SEC < TIME_LIMIT ; depth+=2) {
+		//reduce refutation table
+		for (int i = 0; i < 2; i++) {
+			for (int j = 0; j < 32; j++) {
+				for (int k = 0; k < 32; k++) {
+					assert(refutationTable[i][j][k] >= 0);
+					refutationTable[i][j][k] >> (depth > 6)?1:0;
+				}
+			}
+		}
+		
+	
 		this->node = 0;
 		int best_move;
 		double alpha_init = -DBL_MAX;
@@ -505,18 +671,34 @@ void MyAI::generateMove(char move[6])
 		this->purn_node_count = 0;
 		// run Nega-max
 		// t = Nega_max(this->main_chessboard, &best_move, this->Color, 0, depth);
-		t = NegaScout_max_alpha_bet_purning(this->main_chessboard, &best_move, this->Color, 0, best - IDAS_THRESHOLD, best + IDAS_THRESHOLD, depth);
+		if (HISTORY_HERUSTIC_ACTIVE) {
+			t = NegaScout_max_alpha_bet_purning(this->main_chessboard, &best_move, this->Color, 0, best - IDAS_THRESHOLD, best + IDAS_THRESHOLD, depth);
+		}
+		else {
+			t = NegaScout_max_alpha_bet_purning_Original(this->main_chessboard, &best_move, this->Color, 0, best - IDAS_THRESHOLD, best + IDAS_THRESHOLD, depth);
+		}
+		
 		fprintf(stderr, "IDAS nodes: %d\n", this->node);
 		fflush(stderr);
 		if (t <= best - IDAS_THRESHOLD) {
 			this->node = 0;
-			t = NegaScout_max_alpha_bet_purning(this->main_chessboard, &best_move, this->Color, 0, alpha_init, best - IDAS_THRESHOLD, depth);
+			if (HISTORY_HERUSTIC_ACTIVE) {
+				t = NegaScout_max_alpha_bet_purning(this->main_chessboard, &best_move, this->Color, 0, alpha_init, best - IDAS_THRESHOLD, depth);
+			}
+			else {
+				t = NegaScout_max_alpha_bet_purning_Original(this->main_chessboard, &best_move, this->Color, 0, alpha_init, best - IDAS_THRESHOLD, depth);
+			}
 			fprintf(stderr, "IDAS fail, nodes: %d\n", this->node);
 			fflush(stderr);
 		}
 		else if (t >= best + IDAS_THRESHOLD) {
 			this->node = 0;
-			t = NegaScout_max_alpha_bet_purning(this->main_chessboard, &best_move, this->Color, 0, best + IDAS_THRESHOLD, beta_init, depth);
+			if (HISTORY_HERUSTIC_ACTIVE) {
+				t = NegaScout_max_alpha_bet_purning(this->main_chessboard, &best_move, this->Color, 0, best + IDAS_THRESHOLD, beta_init, depth);
+			}
+			else {
+				t = NegaScout_max_alpha_bet_purning_Original(this->main_chessboard, &best_move, this->Color, 0, best + IDAS_THRESHOLD, beta_init, depth);
+			}
 			fprintf(stderr, "IDAS fail, nodes: %d\n", this->node);
 			fflush(stderr);
 		}

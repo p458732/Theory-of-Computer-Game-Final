@@ -17,6 +17,7 @@
 #define COMMAND_NUM 19
 
 using namespace std;
+
 struct ChessBoard {
 	int Board[32];
 	int CoverChess[14];
@@ -24,6 +25,7 @@ struct ChessBoard {
 	int NoEatFlip;
 	int History[4096];
 	int HistoryCount;
+	
 
 	ChessBoard() {}
 	ChessBoard(const ChessBoard& chessBoard) {
@@ -39,6 +41,7 @@ struct ChessBoard {
 struct Move {
 	int moves ;
 	int priority ;
+	long int historyValue;
 };
 class MyAI
 {
@@ -91,6 +94,7 @@ public:
 private:
 	int Color;
 	int Red_Time, Black_Time;
+	long int refutationTable[2][32][32];
 	ChessBoard main_chessboard;
 	bool timeIsUp;
 	int purn_node_count;
@@ -124,6 +128,7 @@ private:
 	double Nega_max(ChessBoard chessboard, int* move, const int color, const int depth, const int remain_depth);
 	double Nega_max_alpha_bet_purning(const ChessBoard chessboard, int* move, int color, const int depth, double alpha, double beta, const int remain_depth);
 	double NegaScout_max_alpha_bet_purning(const ChessBoard chessboard, int* move, int color, const int depth, double alpha, double beta, const int remain_depth);
+	double NegaScout_max_alpha_bet_purning_Original (const ChessBoard chessboard, int* move, int color, const int depth, double alpha, double beta, const int remain_depth);
 	bool isDraw(const ChessBoard* chessboard);
 	bool isFinish(const ChessBoard* chessboard, int move_count);
 
