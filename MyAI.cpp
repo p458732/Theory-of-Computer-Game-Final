@@ -18,6 +18,8 @@
 
 #define IDAS_DEPTH 3
 #define IDAS_THRESHOLD 0.1
+#define RED_DOMINATE 0
+#define BLACK_DOMINATE 1
 MyAI::MyAI(void) { srand(time(NULL)); }
 
 MyAI::~MyAI(void) {}
@@ -312,7 +314,7 @@ double MyAI::NegaScout_max_alpha_bet_purning(ChessBoard chessboard, int* move, i
 	/*int Chess[2048];*/
 	int move_count = 0, flip_count = 0, remain_count = 0, remain_total = 0, opMove_count = 0;
 	// move
-	move_count = Expand(chessboard.Board, color, Moves, opMoves, opMove_count);
+	move_count = Expand(&chessboard, chessboard.Board, color, Moves, opMoves, opMove_count);
 	MoveOrderSort(chessboard.Board, Moves, move_count);
 	for (int i = 0; i < move_count; i++) {
 		int srcPiecePos = Moves[i].moves / 100;
@@ -438,17 +440,67 @@ double MyAI::NegaScout_max_alpha_bet_purning(ChessBoard chessboard, int* move, i
 		return m;
 	}
 }
-double MyAI::NegaScout_max_alpha_bet_purning_Original(ChessBoard chessboard, int* move, int color, const int depth, double alpha, double beta, const int remain_depth) {
+double MyAI::NegaScout_max_alpha_bet_purning_Original(ChessBoard chessboard, int* move, int color, const int depth, double alpha, double beta, const int remain_depth, Move& material_exchanging) {
 	vector<Move> Moves, opMoves;
 
 	/*int Chess[2048];*/
 	int move_count = 0, flip_count = 0, remain_count = 0, remain_total = 0, opMove_count = 0;
 	int index = -1;
+	int dominate = -1;
 	// move
-	move_count = Expand(chessboard.Board, color, Moves, opMoves, opMove_count);
+	move_count = Expand(&chessboard,chessboard.Board, color, Moves, opMoves, opMove_count);
 	MoveOrderSort(chessboard.Board, Moves, move_count);
 	
-	
+	if (((chessboard.remainNum[0] == 0 && chessboard.remainNum[1] == 0) && chessboard.remainNum[13] > 0) ||
+		((chessboard.redMaxPiece < chessboard.blackMaxPiece) && !(chessboard.redMaxPiece == 0 && chessboard.blackMaxPiece == 6))
+		) {
+		dominate = BLACK_DOMINATE;
+		
+	}
+	else if (((chessboard.remainNum[7] == 0 && chessboard.remainNum[8] == 0) && chessboard.remainNum[6] > 0) ||
+		((chessboard.blackMaxPiece < chessboard.redMaxPiece) && !(chessboard.blackMaxPiece == 0 && chessboard.redMaxPiece == 6))
+		) {
+		dominate = RED_DOMINATE;
+	}
+	isDominate = (dominate == this->Color);
+	//if (color == dominate &&  color == this->Color && depth == 0) {
+	//	for (vector<Move>::iterator it = Moves.begin(); it != Moves.end(); ) { // move
+	//		int srcPiece = it->moves / 100;
+	//		int dstPiece = it->moves % 100;
+	//		int MaxPos = (this->Color) ? chessboard.redMaxPos : chessboard.blackMaxPos;
+	//		int MaxPiece = (this->Color) ? chessboard.redMaxPiece : chessboard.blackMaxPiece;
+	//		// printf("move: %d\n", it->moves);
+	//		if (chessboard.Board[srcPiece] % 7 >= MaxPiece) {
+	//			int srcRow = srcPiece / 4, srcCol = srcPiece % 4;
+	//			int dstRow = dstPiece / 4, dstCol = dstPiece % 4;
+	//			int redMaxRow = MaxPos / 4, redMaxCol = MaxPos % 4;
+	//			int dstDistance = (abs(redMaxRow - dstRow) + abs(redMaxCol - dstCol)), srcDistance = (abs(redMaxRow - srcRow) + abs(redMaxCol - srcCol));
+	//			if (dstDistance >= srcDistance) {
+	//				
+	//				// printf("depth: %d  , [1] move be cutted: %d\n", depth, it->moves);
+	//				it = Moves.erase(it);
+	//				
+	//				move_count--;
+	//			}
+	//			else {
+	//				if (dstDistance % 2 == 0) {
+	//					it++;
+	//				}
+	//				else {
+	//					// printf("depth: %d  ,[2] move be cutted: %d\n", depth, it->moves);
+	//					it = Moves.erase(it);
+	//					move_count--;
+	//				}
+	//				
+	//			}
+	//		}
+	//		else {
+	//			it++;
+	//		}
+	//		
+	//		
+	//	}
+	//}
 	for (vector<Move>::iterator it = Moves.begin(); it != Moves.end(); it++) { // move
 		if (chessboard.HistoryCount > 6) {
 
@@ -460,42 +512,8 @@ double MyAI::NegaScout_max_alpha_bet_purning_Original(ChessBoard chessboard, int
 		}
 		
 	}
-	//sort(Moves.begin(), Moves.end(), Movecompare);
-	//assert(moves.size() == count);
-	//for (int i = 0; i < Moves.size(); i++) {
-	//	for (int k = i; k > 0; k--) {
-
-
-	//		if (chessboard.Board[Moves[k].moves % 100] < 0 && chessboard.Board[Moves[k - 1].moves % 100] < 0) {
-	//			// empty step
-	//			if (rand() % 2) {
-	//				swap(Moves[k], Moves[k - 1]);
-	//			}
-	//		}
-	//		if (chessboard.Board[Moves[k].moves % 100] % 7 > chessboard.Board[Moves[k - 1].moves % 100] % 7) {
-	//			swap(Moves[k], Moves[k - 1]);
-	//		}
-	//		else break;
-	//	}
-	//}
-	//// flip
-	//for (int j = 0; j < 14; j++) { // find remain chess
-	//	if (chessboard.CoverChess[j] > 0) {
-	//		Chess[remain_count] = j;
-	//		remain_count++;
-	//		remain_total += chessboard.CoverChess[j];
-	//	}
-	//}
-	//for (int i = 0; i < 32; i++) { // find cover
-	//	if (chessboard.Board[i] == CHESS_COVER) {
-	//		Moves[move_count + flip_count].moves = i * 100 + i;
-	//		flip_count++;
-	//	}
-	//}
-
-	// random_shuffle(Moves.begin(), Moves.end());
 	if (isTimeUp() || // time is up
-		remain_depth <= 0 ||   // reach limit of depth
+		(remain_depth <= 0 && !checkQuiescentBoard(&chessboard, color, material_exchanging)) ||   // reach limit of depth
 		chessboard.Red_Chess_Num == 0 || // terminal node (no chess type)
 		chessboard.Black_Chess_Num == 0 || // terminal node (no chess type)
 		move_count + flip_count == 0 // terminal node (no move type)
@@ -520,14 +538,14 @@ double MyAI::NegaScout_max_alpha_bet_purning_Original(ChessBoard chessboard, int
 			
 			
 			MakeMove(&new_chessboard, Moves[i].moves, 0); // 0: dummy
-			double t = -NegaScout_max_alpha_bet_purning_Original (new_chessboard, &new_move, color ^ 1, depth + 1, -n, -max(alpha, m), remain_depth - 1); // Scout testing
+			double t = -NegaScout_max_alpha_bet_purning_Original (new_chessboard, &new_move, color ^ 1, depth + 1, -n, -max(alpha, m), remain_depth - 1, Moves[i]); // Scout testing
 			if (t > m) {
 				if (abs(n - beta) < 0.00001 || remain_depth < 3 || t >= beta) {
 					m = t;
 					*move = Moves[i].moves;
 				}
 				else {
-					m = -NegaScout_max_alpha_bet_purning_Original(new_chessboard, &new_move, color ^ 1, depth + 1, -beta, -t, remain_depth - 1); // re-search
+					m = -NegaScout_max_alpha_bet_purning_Original(new_chessboard, &new_move, color ^ 1, depth + 1, -beta, -t, remain_depth - 1, Moves[i]); // re-search
 					*move = Moves[i].moves;
 				}
 			}
@@ -648,8 +666,9 @@ void MyAI::generateMove(char move[6])
 		}
 	}
 	
+	Move tempMove;
 	begin = clock();
-	double best = NegaScout_max_alpha_bet_purning_Original (this->main_chessboard, &IDAS_move, this->Color, 0, -DBL_MAX, DBL_MAX, IDAS_DEPTH);
+	double best = NegaScout_max_alpha_bet_purning_Original (this->main_chessboard, &IDAS_move, this->Color, 0, -DBL_MAX, DBL_MAX, IDAS_DEPTH, tempMove);
 
 	// iterative-deeping, start from 3, time limit = <TIME_LIMIT> sec
 	for (int depth = 4; (double)(clock() - begin) / CLOCKS_PER_SEC < TIME_LIMIT ; depth+=2) {
@@ -669,13 +688,14 @@ void MyAI::generateMove(char move[6])
 		double alpha_init = -DBL_MAX;
 		double beta_init = DBL_MAX;
 		this->purn_node_count = 0;
+		
 		// run Nega-max
 		// t = Nega_max(this->main_chessboard, &best_move, this->Color, 0, depth);
 		if (HISTORY_HERUSTIC_ACTIVE) {
 			t = NegaScout_max_alpha_bet_purning(this->main_chessboard, &best_move, this->Color, 0, best - IDAS_THRESHOLD, best + IDAS_THRESHOLD, depth);
 		}
 		else {
-			t = NegaScout_max_alpha_bet_purning_Original(this->main_chessboard, &best_move, this->Color, 0, best - IDAS_THRESHOLD, best + IDAS_THRESHOLD, depth);
+			t = NegaScout_max_alpha_bet_purning_Original(this->main_chessboard, &best_move, this->Color, 0, best - IDAS_THRESHOLD, best + IDAS_THRESHOLD, depth, tempMove);
 		}
 		
 		fprintf(stderr, "IDAS nodes: %d\n", this->node);
@@ -686,7 +706,7 @@ void MyAI::generateMove(char move[6])
 				t = NegaScout_max_alpha_bet_purning(this->main_chessboard, &best_move, this->Color, 0, alpha_init, best - IDAS_THRESHOLD, depth);
 			}
 			else {
-				t = NegaScout_max_alpha_bet_purning_Original(this->main_chessboard, &best_move, this->Color, 0, alpha_init, best - IDAS_THRESHOLD, depth);
+				t = NegaScout_max_alpha_bet_purning_Original(this->main_chessboard, &best_move, this->Color, 0, alpha_init, best - IDAS_THRESHOLD, depth, tempMove);
 			}
 			fprintf(stderr, "IDAS fail, nodes: %d\n", this->node);
 			fflush(stderr);
@@ -697,7 +717,7 @@ void MyAI::generateMove(char move[6])
 				t = NegaScout_max_alpha_bet_purning(this->main_chessboard, &best_move, this->Color, 0, best + IDAS_THRESHOLD, beta_init, depth);
 			}
 			else {
-				t = NegaScout_max_alpha_bet_purning_Original(this->main_chessboard, &best_move, this->Color, 0, best + IDAS_THRESHOLD, beta_init, depth);
+				t = NegaScout_max_alpha_bet_purning_Original(this->main_chessboard, &best_move, this->Color, 0, best + IDAS_THRESHOLD, beta_init, depth, tempMove);
 			}
 			fprintf(stderr, "IDAS fail, nodes: %d\n", this->node);
 			fflush(stderr);
@@ -744,10 +764,12 @@ void MyAI::MakeMove(ChessBoard* chessboard, const int move, const int chess) {
 		if (chessboard->Board[dst] != CHESS_EMPTY) {
 			if (chessboard->Board[dst] / 7 == 0) { // red
 				(chessboard->Red_Chess_Num)--;
+
 			}
 			else { // black
 				(chessboard->Black_Chess_Num)--;
 			}
+			chessboard->remainNum[chessboard->Board[dst]] --;
 			chessboard->NoEatFlip = 0;
 		}
 		else {
@@ -755,6 +777,7 @@ void MyAI::MakeMove(ChessBoard* chessboard, const int move, const int chess) {
 		}
 		chessboard->Board[dst] = chessboard->Board[src];
 		chessboard->Board[src] = CHESS_EMPTY;
+
 	}
 	chessboard->History[chessboard->HistoryCount++] = move;
 }
@@ -775,7 +798,71 @@ void MyAI::MakeMove(ChessBoard* chessboard, const char move[6])
 	MakeMove(chessboard, m, ConvertChessNo(GetFin(move[3])));
 	Pirnf_Chessboard();
 }
+bool MyAI::checkQuiescentBoard(ChessBoard* chessboard, const int color, Move& material_exchanging) {
+	int gain = 0;
+	if (material_exchanging.eat == 1) {
+		// eat
+		// SSE
+		int gain = 0;
+		int dst = material_exchanging.moves % 100;
+		int boardTemp[32] = { 0 };
+		static const double staticValue[14] = {
+			  1,180,  6, 18, 90,270,1200,
+			  1,180,  6, 18, 90,270,1200
+		};
+		for (int i = 0; i < 32; i++) {
+			boardTemp[i] = chessboard->Board[i];
+		}
+		bool sse = true;
+		int redCounter = 0, blackCounter = 0;
+		int colorTemp = color;
+		int nextTurn = color ^ 1;
+		vector<FriendChessList> red;
+		vector<FriendChessList> black;
+		int adjacentChess[4] = { dst - 4, dst - 1 ,dst + 1, dst + 4 };
+		// TODO: POW
+		for (int i = 0; i < 4; i++) {
+			if (adjacentChess[i] >= 0 && adjacentChess[i] < 32) {
+				if (chessboard->Board[adjacentChess[i]] / 7 == 0 && chessboard->Board[adjacentChess[i]] >= 0) {
+					FriendChessList temp;
+					temp.value = chessboard->Board[adjacentChess[i]];
 
+					temp.i = adjacentChess[i];
+					red.push_back(temp);
+				}
+				else if (chessboard->Board[adjacentChess[i]] / 7 == 1 && chessboard->Board[adjacentChess[i]] >= 0) {
+					FriendChessList temp;
+					temp.value = chessboard->Board[adjacentChess[i]];
+					temp.i = adjacentChess[i];
+					black.push_back(temp);
+				}
+
+			}
+		}
+		
+		sort(red.begin(), red.end(), [](FriendChessList a, FriendChessList b) {return a.value < b.value; });
+		sort(black.begin(), black.end(), [](FriendChessList a, FriendChessList b) {return a.value < b.value; });
+
+		while (red.size() > 0 && black.size() > 0) {
+			if (nextTurn == 0) {
+				gain += staticValue[boardTemp[red.back().value]] * (this->Color == 0) ? 1 : -1;
+				boardTemp[red.back().i] = CHESS_EMPTY;
+				boardTemp[dst] = boardTemp[red.back().i];
+				red.pop_back();
+			}
+			else {
+				gain += staticValue[boardTemp[black.back().value]] * (this->Color == 0) ? 1 : -1;;
+				boardTemp[red.back().i] = CHESS_EMPTY;
+				boardTemp[dst] = boardTemp[black.back().i];
+				red.pop_back();
+			}
+			nextTurn ^= 1;
+		}
+
+
+	}
+	return gain > 0;
+}
 int MyAI::Expand(const int* board, const int color, vector<Move>& Result)
 {
 	int ResultCount = 0;
@@ -879,13 +966,26 @@ int MyAI::Expand(const int* board, const int color, int* Result)
 	}
 	return ResultCount;
 }
-int MyAI::Expand(const int* board, const int color, vector<Move>& Result, vector<Move>& opResult, int& opCount)
+int MyAI::Expand(ChessBoard* chessboard, const int* board, const int color, vector<Move>& Result, vector<Move>& opResult, int& opCount)
 {
 	int ResultCount = 0;
 	for (int i = 0; i < 32; i++)
 	{
+		if (board[i] / 7 == 0) {
+			if (board[i] % 7 > chessboard->redMaxPiece) {
+				chessboard->redMaxPiece = board[i] % 7;
+				chessboard->redMaxPos = i;
+			}
+		}else if (board[i] / 7 == 1) {
+			if (board[i] % 7 > chessboard->blackMaxPiece) {
+				chessboard->blackMaxPiece = board[i] % 7;
+				chessboard->blackMaxPos = i;
+			}
+		}
+		
 		if (board[i] >= 0 && board[i] / 7 == color)
 		{
+			
 			//Gun
 			if (board[i] % 7 == 1)
 			{
@@ -898,6 +998,7 @@ int MyAI::Expand(const int* board, const int color, vector<Move>& Result, vector
 						Move temp;
 						temp.moves = i * 100 + rowCount;
 						temp.priority = board[i] % 7;
+						temp.eat = (board[rowCount] >= 0) ? 1 : 0;
 						Result.push_back(temp);
 					}
 				}
@@ -909,6 +1010,7 @@ int MyAI::Expand(const int* board, const int color, vector<Move>& Result, vector
 						Move temp;
 						temp.moves = i * 100 + colCount;
 						temp.priority = board[i] % 7;
+						temp.eat = (board[colCount] >= 0) ? 1 : 0;
 						Result.push_back(temp);
 					}
 				}
@@ -924,6 +1026,7 @@ int MyAI::Expand(const int* board, const int color, vector<Move>& Result, vector
 						Move temp;
 						temp.moves = i * 100 + Moves[k];
 						temp.priority = board[i] % 7;
+						temp.eat = (board[Moves[k]] >= 0) ? 1 : 0;
 						Result.push_back(temp);
 					}
 				}
@@ -943,6 +1046,7 @@ int MyAI::Expand(const int* board, const int color, vector<Move>& Result, vector
 						Move temp;
 						temp.moves = i * 100 + rowCount;
 						temp.priority = board[i] % 7;
+						temp.eat = (board[rowCount] >= 0) ? 1 : 0;
 						opResult.push_back(temp);
 					}
 				}
@@ -954,6 +1058,7 @@ int MyAI::Expand(const int* board, const int color, vector<Move>& Result, vector
 						Move temp;
 						temp.moves = i * 100 + colCount;
 						temp.priority = board[i] % 7;
+						temp.eat = (board[colCount] >= 0) ? 1 : 0;
 						opResult.push_back(temp);
 					}
 				}
@@ -968,6 +1073,7 @@ int MyAI::Expand(const int* board, const int color, vector<Move>& Result, vector
 					{
 						Move temp;
 						temp.moves = i * 100 + Moves[k];
+						temp.eat = (board[Moves[k]] >= 0) ? 1 : 0;
 						temp.priority = board[i] % 7;
 						opResult.push_back(temp);
 					}
@@ -1202,11 +1308,12 @@ double MyAI::Evaluate(const ChessBoard* chessboard,
 	// score = My Score - Opponent's Score
 	// offset = <WIN + BONUS> to let score always not less than zero
 	int singleMoveCount[14] = { 0 };
+	double dominateScore = 0;
 	double score = OFFSET;
 	double myMobilityScore = 0;
 	double opMobilityScore = 0;
 	bool finish = false;
-
+	
 	for (int i = 0; i < Result.size(); i++) {
 		int srcPiece = Result[i].moves / 100;
 		singleMoveCount[chessboard->Board[srcPiece]] ++;
@@ -1260,12 +1367,13 @@ double MyAI::Evaluate(const ChessBoard* chessboard,
 		// linear map to (-<WIN>, <WIN>)
 		// score max value = 1*5 + 180*2 + 6*2 + 18*2 + 90*2 + 270*2 + 810*1 = 1943
 		// <ORIGINAL_SCORE> / <ORIGINAL_SCORE_MAX_VALUE> * (<WIN> - 0.01)
-		piece_value += 0.75 * myMobilityScore - opMobilityScore;
+		int opM = (this->isDominate) ? 10 : 1;
+		piece_value += 0.75 * myMobilityScore - opM * opMobilityScore;
 		piece_value = piece_value / 1943 * (WIN - 0.01) ;
 		score += piece_value ;
 		finish = false;
 	}
-
+	
 	// Bonus (Only Win / Draw)
 	if (finish) {
 		if ((this->Color == RED && chessboard->Red_Chess_Num > chessboard->Black_Chess_Num) ||
@@ -1288,7 +1396,7 @@ double MyAI::Evaluate(const ChessBoard* chessboard,
 		}
 	}
 
-	return score;
+	return score - 0.005 * chessboard->HistoryCount;
 }
 double MyAI::Nega_max(const ChessBoard chessboard, int* move, const int color, const int depth, const int remain_depth) {
 	vector<Move> s;

@@ -1,13 +1,13 @@
 ﻿  MyAI.cpp
-C:\Users\ppp45\source\repos\Project8\Project8\MyAI.cpp(21,30): warning C4244: '引數': 將 'time_t' 轉換為 'unsigned int'，由於類型不同，可能導致資料遺失
-C:\Users\ppp45\source\repos\Project8\Project8\MyAI.cpp(611,7): warning C4101: 'moves': 未參考的區域變數
-C:\Users\ppp45\source\repos\Project8\Project8\MyAI.cpp(682,41): warning C4804: '>>': 作業中不安全的使用類型 'bool'
-C:\Users\ppp45\source\repos\Project8\Project8\MyAI.cpp(852,29): warning C4267: '=': 將 'size_t' 轉換為 'int'，資料可能遺失
-C:\Users\ppp45\source\repos\Project8\Project8\MyAI.cpp(1000,27): warning C4267: '=': 將 'size_t' 轉換為 'int'，資料可能遺失
-C:\Users\ppp45\source\repos\Project8\Project8\MyAI.cpp(1001,29): warning C4267: '=': 將 'size_t' 轉換為 'int'，資料可能遺失
+C:\Users\ppp45\source\repos\Project8\Project8\MyAI.cpp(23,30): warning C4244: '引數': 將 'time_t' 轉換為 'unsigned int'，由於類型不同，可能導致資料遺失
+C:\Users\ppp45\source\repos\Project8\Project8\MyAI.cpp(608,7): warning C4101: 'moves': 未參考的區域變數
+C:\Users\ppp45\source\repos\Project8\Project8\MyAI.cpp(680,41): warning C4804: '>>': 作業中不安全的使用類型 'bool'
+C:\Users\ppp45\source\repos\Project8\Project8\MyAI.cpp(918,29): warning C4267: '=': 將 'size_t' 轉換為 'int'，資料可能遺失
+C:\Users\ppp45\source\repos\Project8\Project8\MyAI.cpp(1085,27): warning C4267: '=': 將 'size_t' 轉換為 'int'，資料可能遺失
+C:\Users\ppp45\source\repos\Project8\Project8\MyAI.cpp(1086,29): warning C4267: '=': 將 'size_t' 轉換為 'int'，資料可能遺失
   正在產生程式碼
-  18 of 167 functions (10.8%) were compiled, the rest were copied from previous compilation.
-    10 functions were new in current compilation
-    20 functions had inline decision re-evaluated but remain unchanged
+  1 of 262 functions ( 0.4%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    2 functions had inline decision re-evaluated but remain unchanged
   已完成程式碼產生
   Project8.vcxproj -> C:\Users\ppp45\source\repos\Project8\x64\Release\Project8.exe

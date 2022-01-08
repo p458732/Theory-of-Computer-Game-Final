@@ -18,13 +18,19 @@
 
 using namespace std;
 
+
 struct ChessBoard {
 	int Board[32];
 	int CoverChess[14];
 	int Red_Chess_Num, Black_Chess_Num;
 	int NoEatFlip;
+	int remainNum[14] = { 5,2,2,2,2,2,1, 5,2,2,2,2,2,1 };
 	int History[4096];
 	int HistoryCount;
+	int redMaxPiece;
+	int redMaxPos;
+	int blackMaxPiece;
+	int blackMaxPos;
 	
 
 	ChessBoard() {}
@@ -41,7 +47,17 @@ struct ChessBoard {
 struct Move {
 	int moves ;
 	int priority ;
+	int eat;
 	long int historyValue;
+};
+struct FriendChessList {
+	int distance;
+	int canEat;
+	int value;
+	int row;
+	int col;
+	int i;
+
 };
 class MyAI
 {
@@ -98,6 +114,7 @@ private:
 	ChessBoard main_chessboard;
 	bool timeIsUp;
 	int purn_node_count;
+	bool isDominate = false;
 
 #ifdef _WIN64
 	clock_t begin;
@@ -121,16 +138,17 @@ private:
 	void MakeMove(ChessBoard* chessboard, const char move[6]);
 	bool Referee(const int* board, const int Startoint, const int EndPoint, const int color);
 	int Expand(const int* board, const int color, vector<Move>& Result);
-	int Expand(const int* board, const int color, vector<Move>& Result, vector<Move>& opResult, int& opCount);
+	int Expand(ChessBoard* chessboard, const int* board, const int color, vector<Move>& Result, vector<Move>& opResult, int& opCount);
 	int Expand(const int* board, const int color, int* Result);
 	double Evaluate(const ChessBoard* chessboard, const int legal_move_count, const int color);
 	double Evaluate(const ChessBoard* chessboard, const int legal_move_count, const int color, vector<Move>& Result, vector<Move>& opResult);
 	double Nega_max(ChessBoard chessboard, int* move, const int color, const int depth, const int remain_depth);
 	double Nega_max_alpha_bet_purning(const ChessBoard chessboard, int* move, int color, const int depth, double alpha, double beta, const int remain_depth);
 	double NegaScout_max_alpha_bet_purning(const ChessBoard chessboard, int* move, int color, const int depth, double alpha, double beta, const int remain_depth);
-	double NegaScout_max_alpha_bet_purning_Original (const ChessBoard chessboard, int* move, int color, const int depth, double alpha, double beta, const int remain_depth);
+	double NegaScout_max_alpha_bet_purning_Original (const ChessBoard chessboard, int* move, int color, const int depth, double alpha, double beta, const int remain_depth, Move& material_exchanging);
 	bool isDraw(const ChessBoard* chessboard);
 	bool isFinish(const ChessBoard* chessboard, int move_count);
+	bool checkQuiescentBoard(ChessBoard* chessboard, const int color, Move& material_exchanging);
 
 	// Display
 	void Pirnf_Chess(int chess_no, char* Result);
