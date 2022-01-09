@@ -20,7 +20,30 @@
 #define IDAS_THRESHOLD 0.1
 #define RED_DOMINATE 0
 #define BLACK_DOMINATE 1
-MyAI::MyAI(void) { srand(time(NULL)); }
+
+void initTranspositionTable() {
+	hashColor[0] = rand();
+	hashColor[1] = rand();
+	rootHashValue = 0;
+	// 14=> cover 15=>empty
+	for (int i = 0; i < 16; i++)
+	{
+		for (int j = 0; j < 32; j++)
+		{
+			hashTable[i][j] = ((unsigned long long)rand() << 32) + rand();
+		}
+	}
+	for (int j = 0; j < 32; j++)
+	{
+		rootHashValue ^= hashTable[14][j];
+	}
+}
+
+MyAI::MyAI(void) {
+	srand(time(NULL));
+	initTranspositionTable();
+	main_chessboard.hashValue = rootHashValue;
+}
 
 MyAI::~MyAI(void) {}
 
@@ -440,7 +463,7 @@ double MyAI::NegaScout_max_alpha_bet_purning(ChessBoard chessboard, int* move, i
 		return m;
 	}
 }
-double MyAI::NegaScout_max_alpha_bet_purning_Original(ChessBoard chessboard, int* move, int color, const int depth, double alpha, double beta, const int remain_depth, Move& material_exchanging) {
+double MyAI::NegaScout_max_alpha_bet_purning_Original(ChessBoard chessboard, HashEntry* transpositionTable, int* move, int color, const int depth, double alpha, double beta, const int remain_depth, Move& material_exchanging) {
 	vector<Move> Moves, opMoves;
 
 	/*int Chess[2048];*/
@@ -538,14 +561,14 @@ double MyAI::NegaScout_max_alpha_bet_purning_Original(ChessBoard chessboard, int
 			
 			
 			MakeMove(&new_chessboard, Moves[i].moves, 0); // 0: dummy
-			double t = -NegaScout_max_alpha_bet_purning_Original (new_chessboard, &new_move, color ^ 1, depth + 1, -n, -max(alpha, m), remain_depth - 1, Moves[i]); // Scout testing
+			double t = -NegaScout_max_alpha_bet_purning_Original (new_chessboard, transpositionTable, &new_move, color ^ 1, depth + 1, -n, -max(alpha, m), remain_depth - 1, Moves[i]); // Scout testing
 			if (t > m) {
 				if (abs(n - beta) < 0.00001 || remain_depth < 3 || t >= beta) {
 					m = t;
 					*move = Moves[i].moves;
 				}
 				else {
-					m = -NegaScout_max_alpha_bet_purning_Original(new_chessboard, &new_move, color ^ 1, depth + 1, -beta, -t, remain_depth - 1, Moves[i]); // re-search
+					m = -NegaScout_max_alpha_bet_purning_Original(new_chessboard, transpositionTable ,&new_move, color ^ 1, depth + 1, -beta, -t, remain_depth - 1, Moves[i]); // re-search
 					*move = Moves[i].moves;
 				}
 			}
@@ -656,8 +679,8 @@ void MyAI::generateMove(char move[6])
 	int stableMove = 0;
 	int IDAS_move = 0;
 	double t = -DBL_MAX;
+	HashEntry* transpositionTable = new HashEntry[1 << 20];
 	//init refutation table
-	
 	for (int i = 0; i < 2; i++) {
 		for (int j = 0; j < 32; j++) {
 			for (int k = 0; k < 32; k++) {
@@ -668,7 +691,7 @@ void MyAI::generateMove(char move[6])
 	
 	Move tempMove;
 	begin = clock();
-	double best = NegaScout_max_alpha_bet_purning_Original (this->main_chessboard, &IDAS_move, this->Color, 0, -DBL_MAX, DBL_MAX, IDAS_DEPTH, tempMove);
+	double best = NegaScout_max_alpha_bet_purning_Original (this->main_chessboard, transpositionTable, &IDAS_move, this->Color, 0, -DBL_MAX, DBL_MAX, IDAS_DEPTH, tempMove);
 
 	// iterative-deeping, start from 3, time limit = <TIME_LIMIT> sec
 	for (int depth = 4; (double)(clock() - begin) / CLOCKS_PER_SEC < TIME_LIMIT ; depth+=2) {
@@ -695,7 +718,7 @@ void MyAI::generateMove(char move[6])
 			t = NegaScout_max_alpha_bet_purning(this->main_chessboard, &best_move, this->Color, 0, best - IDAS_THRESHOLD, best + IDAS_THRESHOLD, depth);
 		}
 		else {
-			t = NegaScout_max_alpha_bet_purning_Original(this->main_chessboard, &best_move, this->Color, 0, best - IDAS_THRESHOLD, best + IDAS_THRESHOLD, depth, tempMove);
+			t = NegaScout_max_alpha_bet_purning_Original(this->main_chessboard, transpositionTable ,&best_move, this->Color, 0, best - IDAS_THRESHOLD, best + IDAS_THRESHOLD, depth, tempMove);
 		}
 		
 		fprintf(stderr, "IDAS nodes: %d\n", this->node);
@@ -706,7 +729,7 @@ void MyAI::generateMove(char move[6])
 				t = NegaScout_max_alpha_bet_purning(this->main_chessboard, &best_move, this->Color, 0, alpha_init, best - IDAS_THRESHOLD, depth);
 			}
 			else {
-				t = NegaScout_max_alpha_bet_purning_Original(this->main_chessboard, &best_move, this->Color, 0, alpha_init, best - IDAS_THRESHOLD, depth, tempMove);
+				t = NegaScout_max_alpha_bet_purning_Original(this->main_chessboard, transpositionTable, &best_move, this->Color, 0, alpha_init, best - IDAS_THRESHOLD, depth, tempMove);
 			}
 			fprintf(stderr, "IDAS fail, nodes: %d\n", this->node);
 			fflush(stderr);
@@ -717,7 +740,7 @@ void MyAI::generateMove(char move[6])
 				t = NegaScout_max_alpha_bet_purning(this->main_chessboard, &best_move, this->Color, 0, best + IDAS_THRESHOLD, beta_init, depth);
 			}
 			else {
-				t = NegaScout_max_alpha_bet_purning_Original(this->main_chessboard, &best_move, this->Color, 0, best + IDAS_THRESHOLD, beta_init, depth, tempMove);
+				t = NegaScout_max_alpha_bet_purning_Original(this->main_chessboard, transpositionTable ,&best_move, this->Color, 0, best + IDAS_THRESHOLD, beta_init, depth, tempMove);
 			}
 			fprintf(stderr, "IDAS fail, nodes: %d\n", this->node);
 			fflush(stderr);
@@ -751,6 +774,7 @@ void MyAI::generateMove(char move[6])
 	printf("move:%s\n", move);
 	printf("--------------------------\n");
 	this->Pirnf_Chessboard();
+	delete[] transpositionTable;
 }
 
 void MyAI::MakeMove(ChessBoard* chessboard, const int move, const int chess) {
@@ -759,20 +783,28 @@ void MyAI::MakeMove(ChessBoard* chessboard, const int move, const int chess) {
 		chessboard->Board[src] = chess;
 		chessboard->CoverChess[chess]--;
 		chessboard->NoEatFlip = 0;
+		chessboard->hashValue ^= (hashTable[14][src] ^ hashTable[chess][src]); // coverd XOR chess 
+		chessboard->hashValue ^= hashColor[0] ^ hashColor[1]; // red XOR black
+
 	}
 	else { // move
+		chessboard->hashValue ^= hashColor[chessboard->Board[dst] / 7];
 		if (chessboard->Board[dst] != CHESS_EMPTY) {
+			chessboard->hashValue ^= (hashTable[chessboard->Board[15]][src] ^ hashTable[chessboard->Board[src]][src] ^ hashTable[chessboard->Board[src]][dst] ^ hashTable[chessboard->Board[dst]][dst]);
 			if (chessboard->Board[dst] / 7 == 0) { // red
 				(chessboard->Red_Chess_Num)--;
+				
 
 			}
 			else { // black
 				(chessboard->Black_Chess_Num)--;
+				
 			}
 			chessboard->remainNum[chessboard->Board[dst]] --;
 			chessboard->NoEatFlip = 0;
 		}
 		else {
+			chessboard->hashValue ^= (hashTable[chessboard->Board[15]][src] ^ hashTable[chessboard->Board[src]][src] ^ hashTable[chessboard->Board[src]][dst] ^ hashTable[15][dst]);
 			chessboard->NoEatFlip += 1;
 		}
 		chessboard->Board[dst] = chessboard->Board[src];
@@ -971,7 +1003,8 @@ int MyAI::Expand(ChessBoard* chessboard, const int* board, const int color, vect
 	int ResultCount = 0;
 	for (int i = 0; i < 32; i++)
 	{
-		if (board[i] / 7 == 0) {
+		// WTF?
+		/*if (board[i] / 7 == 0) {
 			if (board[i] % 7 > chessboard->redMaxPiece) {
 				chessboard->redMaxPiece = board[i] % 7;
 				chessboard->redMaxPos = i;
@@ -981,7 +1014,7 @@ int MyAI::Expand(ChessBoard* chessboard, const int* board, const int color, vect
 				chessboard->blackMaxPiece = board[i] % 7;
 				chessboard->blackMaxPos = i;
 			}
-		}
+		}*/
 		
 		if (board[i] >= 0 && board[i] / 7 == color)
 		{
@@ -1357,6 +1390,18 @@ double MyAI::Evaluate(const ChessBoard* chessboard,
 					opMobilityScore += 0.05 * values[chessboard->Board[i]] * singleMoveCount[chessboard->Board[i]];
 				}
 			}
+		}
+		if (chessboard->remainNum[0] > 0 && chessboard->remainNum[13] > 0 && 1 == this->Color) {
+			piece_value -= 100 * chessboard->remainNum[0];
+		}
+		if (chessboard->remainNum[7] > 0 && chessboard->remainNum[6] > 0 && 0 == this->Color) {
+			piece_value -= 100 * chessboard->remainNum[7];
+		}
+		if (chessboard->remainNum[7] > 0 && chessboard->remainNum[6] > 0 && 1 == this->Color) {
+			piece_value += 10 * chessboard->remainNum[7];
+		}
+		if (chessboard->remainNum[0] > 0 && chessboard->remainNum[13] > 0 && 0 == this->Color) {
+			piece_value += 10 * chessboard->remainNum[0];
 		}
 		/*for (int i = 0; i < 14; ++i) {
 

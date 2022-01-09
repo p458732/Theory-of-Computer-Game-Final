@@ -17,8 +17,9 @@
 #define COMMAND_NUM 19
 
 using namespace std;
-
-
+static unsigned hashColor[2];
+static unsigned long long int hashTable[16][32];
+static unsigned long long int rootHashValue;
 struct ChessBoard {
 	int Board[32];
 	int CoverChess[14];
@@ -31,7 +32,7 @@ struct ChessBoard {
 	int redMaxPos;
 	int blackMaxPiece;
 	int blackMaxPos;
-	
+	unsigned long long int hashValue;
 
 	ChessBoard() {}
 	ChessBoard(const ChessBoard& chessBoard) {
@@ -49,6 +50,13 @@ struct Move {
 	int priority ;
 	int eat;
 	long int historyValue;
+};
+struct HashEntry {
+	double value;
+	unsigned int pos;
+	int move;
+	int depth;
+	int type; // 0=> exact 1=>alpha 2=>beta
 };
 struct FriendChessList {
 	int distance;
@@ -145,7 +153,7 @@ private:
 	double Nega_max(ChessBoard chessboard, int* move, const int color, const int depth, const int remain_depth);
 	double Nega_max_alpha_bet_purning(const ChessBoard chessboard, int* move, int color, const int depth, double alpha, double beta, const int remain_depth);
 	double NegaScout_max_alpha_bet_purning(const ChessBoard chessboard, int* move, int color, const int depth, double alpha, double beta, const int remain_depth);
-	double NegaScout_max_alpha_bet_purning_Original (const ChessBoard chessboard, int* move, int color, const int depth, double alpha, double beta, const int remain_depth, Move& material_exchanging);
+	double NegaScout_max_alpha_bet_purning_Original (const ChessBoard chessboard, HashEntry* transpositionTable, int* move, int color, const int depth, double alpha, double beta, const int remain_depth, Move& material_exchanging);
 	bool isDraw(const ChessBoard* chessboard);
 	bool isFinish(const ChessBoard* chessboard, int move_count);
 	bool checkQuiescentBoard(ChessBoard* chessboard, const int color, Move& material_exchanging);
