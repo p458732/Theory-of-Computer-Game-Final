@@ -18,13 +18,15 @@
 
 using namespace std;
 static unsigned hashColor[2];
-static unsigned long long int hashTable[16][32];
-static unsigned long long int rootHashValue;
+static unsigned long long  hashTable[16][32];
+static unsigned long long rootHashValue;
 struct ChessBoard {
 	int Board[32];
 	int CoverChess[14];
+	int initFlipPOS[32];
 	int Red_Chess_Num, Black_Chess_Num;
 	int NoEatFlip;
+	int initFlipCount;
 	int remainNum[14] = { 5,2,2,2,2,2,1, 5,2,2,2,2,2,1 };
 	int History[4096];
 	int HistoryCount;
@@ -32,17 +34,22 @@ struct ChessBoard {
 	int redMaxPos;
 	int blackMaxPiece;
 	int blackMaxPos;
-	unsigned long long int hashValue;
+	double darkPieceValue;
+	unsigned long long  hashValue;
 
 	ChessBoard() {}
 	ChessBoard(const ChessBoard& chessBoard) {
 		memcpy(this->Board, chessBoard.Board, 32 * sizeof(int));
+		memcpy(this->initFlipPOS, chessBoard.initFlipPOS, 32 * sizeof(int));
 		memcpy(this->CoverChess, chessBoard.CoverChess, 14 * sizeof(int));
 		this->Red_Chess_Num = chessBoard.Red_Chess_Num;
 		this->Black_Chess_Num = chessBoard.Black_Chess_Num;
 		this->NoEatFlip = chessBoard.NoEatFlip;
 		memcpy(this->History, chessBoard.History, chessBoard.HistoryCount * sizeof(int));
 		this->HistoryCount = chessBoard.HistoryCount;
+		this->hashValue = chessBoard.hashValue;
+		this->initFlipCount = chessBoard.initFlipCount;
+		this->darkPieceValue = chessBoard.darkPieceValue;
 	}
 };
 struct Move {
@@ -52,11 +59,13 @@ struct Move {
 	long int historyValue;
 };
 struct HashEntry {
-	double value;
-	unsigned int pos;
+	unsigned long long  value = 0;
+	double historyOffset = 0;
+	double score = 0;
+	int depth = 0;
+	int type = 3; // 0=> exact 1=>alpha 2=>beta
+	// unsigned int pos;
 	int move;
-	int depth;
-	int type; // 0=> exact 1=>alpha 2=>beta
 };
 struct FriendChessList {
 	int distance;
@@ -123,16 +132,19 @@ private:
 	bool timeIsUp;
 	int purn_node_count;
 	bool isDominate = false;
+	bool oneRound = false;
 
 #ifdef _WIN64
 	clock_t begin;
+	clock_t lastTime;
 #else
 	struct timeval begin;
 #endif
 
 	// statistics
 	int node;
-
+	int hashHit;
+	int hashHit2;
 	// Utils
 	int GetFin(char c);
 	int ConvertChessNo(int input);
@@ -146,14 +158,14 @@ private:
 	void MakeMove(ChessBoard* chessboard, const char move[6]);
 	bool Referee(const int* board, const int Startoint, const int EndPoint, const int color);
 	int Expand(const int* board, const int color, vector<Move>& Result);
-	int Expand(ChessBoard* chessboard, const int* board, const int color, vector<Move>& Result, vector<Move>& opResult, int& opCount);
+	int Expand(ChessBoard* chessboard, const int* board, const int color, Move* Result, Move* opResult, int& opCount);
 	int Expand(const int* board, const int color, int* Result);
 	double Evaluate(const ChessBoard* chessboard, const int legal_move_count, const int color);
-	double Evaluate(const ChessBoard* chessboard, const int legal_move_count, const int color, vector<Move>& Result, vector<Move>& opResult);
+	double Evaluate(const ChessBoard* chessboard, const int legal_move_count, const int color, Move* Result, Move* opResult, int& moveCount, int& opMoveCount);
 	double Nega_max(ChessBoard chessboard, int* move, const int color, const int depth, const int remain_depth);
 	double Nega_max_alpha_bet_purning(const ChessBoard chessboard, int* move, int color, const int depth, double alpha, double beta, const int remain_depth);
 	double NegaScout_max_alpha_bet_purning(const ChessBoard chessboard, int* move, int color, const int depth, double alpha, double beta, const int remain_depth);
-	double NegaScout_max_alpha_bet_purning_Original (const ChessBoard chessboard, HashEntry* transpositionTable, int* move, int color, const int depth, double alpha, double beta, const int remain_depth, Move& material_exchanging);
+	double NegaScout_max_alpha_bet_purning_Original ( ChessBoard chessboard, HashEntry* transpositionTable, int* move, int color, const int depth, double alpha, double beta, const int remain_depth, Move& material_exchanging);
 	bool isDraw(const ChessBoard* chessboard);
 	bool isFinish(const ChessBoard* chessboard, int move_count);
 	bool checkQuiescentBoard(ChessBoard* chessboard, const int color, Move& material_exchanging);
@@ -166,3 +178,7 @@ private:
 
 #endif
 
+static const double values[14] = {
+			  1,180,  6, 18, 90,270,1200,
+			  1,180,  6, 18, 90,270,1200
+};
